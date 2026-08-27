@@ -14,7 +14,7 @@ Requires [Rust](https://rustup.rs/).
 
 ## Download
 
-👉 [Releases](../../releases) — grab `RustyBird-windows.zip`, unpack and run `RustyBird.exe`.
+[Releases](../../releases) — download `RustyBird-windows.zip`, extract it, and run `RustyBird.exe`.
 
 ## Tech
 
