@@ -3,6 +3,11 @@ name = "pypybird"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "rustybird"
+crate-type = ["cdylib"]
+path = "src/main.rs"
+
 [dependencies]
 macroquad = { version = "0.4", features = ["audio"] }
 image = { version = "0.25", default-features = false, features = ["ico", "png", "bmp"] }
