@@ -32,9 +32,6 @@ const START_Y: f32 = 330.0;
 const START_W: f32 = 100.0;
 const START_H: f32 = 56.0;
 const MENU_BIRD_X: f32 = 144.0;
-const FS_X: f32 = W - 26.0;
-const FS_Y: f32 = 6.0;
-const FS_S: f32 = 20.0;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum State {
@@ -291,10 +288,6 @@ async fn main() {
     let mut g = Game::new();
     g.new_round();
     let mut pipes: Vec<Pipe> = Vec::new();
-    let mut fullscreen = false;
-    let mut restore_timer = 0.0;
-    let rt = render_target(W as u32, H as u32);
-    rt.texture.set_filter(FilterMode::Nearest);
 
     loop {
         let dt = get_frame_time().min(1.0 / 30.0);
@@ -323,21 +316,6 @@ async fn main() {
                 }
                 _ => {}
             }
-        }
-        let over_fs = px >= FS_X && px <= FS_X + FS_S && py >= FS_Y && py <= FS_Y + FS_S;
-        if restore_timer > 0.0 {
-            restore_timer -= dt;
-            if restore_timer <= 0.0 {
-                request_new_screen_size(W, H);
-            }
-        }
-        if press && over_fs {
-            fullscreen = !fullscreen;
-            set_fullscreen(fullscreen);
-            if !fullscreen {
-                restore_timer = 0.2;
-            }
-            press = false;
         }
         let over_start = px >= START_X && px <= START_X + START_W && py >= START_Y && py <= START_Y + START_H;
         let start_held = g.state == State::Menu && held && over_start;
@@ -506,9 +484,14 @@ async fn main() {
             g.base_x += base_w;
         }
 
-        let mut cam = Camera2D::from_display_rect(Rect::new(0.0, 0.0, W, H));
-        cam.render_target = Some(rt.clone());
-        set_camera(&cam);
+        let (ox, oy, s) = viewport();
+        let sw = screen_width();
+        let sh = screen_height();
+        set_camera(&Camera2D {
+            zoom: vec2(2.0 * s / sw, 2.0 * s / sh),
+            target: vec2(W / 2.0, H / 2.0),
+            ..Default::default()
+        });
         clear_background(BLACK);
 
         let bg = &a.bg[g.bg_i];
@@ -631,38 +614,18 @@ async fn main() {
             },
         );
 
-        let c = 5.0;
-        let th = 2.0;
-        let fs_col = Color::new(1.0, 1.0, 1.0, if over_fs && held { 0.95 } else { 0.55 });
-        for (cx, cy, dx, dy) in [
-            (FS_X, FS_Y, 1.0, 1.0),
-            (FS_X + FS_S - c, FS_Y, -1.0, 1.0),
-            (FS_X, FS_Y + FS_S - th, 1.0, -1.0),
-            (FS_X + FS_S - c, FS_Y + FS_S - th, -1.0, -1.0),
-        ] {
-            draw_rectangle(cx, cy, c, th, fs_col);
-            draw_rectangle(if dx > 0.0 { cx } else { cx + c - th }, if dy > 0.0 { cy } else { cy - c + th }, th, c, fs_col);
-        }
-
         if g.flash > 0.0 {
             draw_rectangle(0.0, 0.0, W, H, Color::new(1.0, 1.0, 1.0, g.flash.min(1.0)));
         }
 
         set_default_camera();
-        clear_background(BLACK);
-        let (ox, oy, s) = viewport();
-        draw_texture_ex(
-            &rt.texture,
-            ox,
-            oy,
-            WHITE,
-            DrawTextureParams {
-                dest_size: Some(vec2(W * s, H * s)),
-                flip_y: true,
-                ..Default::default()
-            },
-        );
 
         next_frame().await
     }
+}
+
+#[cfg(target_os = "android")]
+#[no_mangle]
+pub extern "C" fn quad_main() {
+    main();
 }
